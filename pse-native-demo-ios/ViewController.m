@@ -149,17 +149,14 @@
 
 - (NSData*) paramsAsData {
     
-    NSString* userTypeId = [[self userTypes] valueForKey:[[[self userTypes] allKeys] objectAtIndex:[(NSNumber*)[[self userTypePicker] selectedObject][0] integerValue]]];
-    NSString* authorizerId = [[self authorizers] valueForKey:[[[[self authorizers] allKeys] sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)] objectAtIndex:[(NSNumber*)[[self authorizerPicker] selectedObject][0] integerValue]]];
-
     NSDictionary *mapData = @{@"cus": [[self formValues] valueForKey:@"cus"],
                               @"amount": [[self formValues] valueForKey:@"amount"],
-                              @"authorizerId": authorizerId,
+                              @"authorizerId": [self authorizerId],
                               @"subject": [[self formValues] valueForKey:@"subject"],
                               @"merchant": [[self formValues] valueForKey:@"merchant"],
                               @"cancelURL": [[self formValues] valueForKey:@"returnURL"],
                               @"paymentId": [[self formValues] valueForKey:@"cus"],
-                              @"userType": userTypeId,
+                              @"userType": [self userTypeId],
                               @"returnURL": [[self formValues] valueForKey:@"returnURL"],
                               @"payerEmail": [[self formValues] valueForKey:@"payerEmail"]};
     
@@ -167,28 +164,33 @@
     return [[self toFormUrlEncode:mapData] dataUsingEncoding:NSUTF8StringEncoding];
 }
 
+- (NSString*) userTypeId {
+    
+    return [[self userTypes] valueForKey:[[[[self userTypes] allKeys] sortedArrayUsingDescriptors:@[[self reverseSortDescriptor]]] objectAtIndex:[(NSNumber*)[[self userTypePicker] selectedObject][0] integerValue]]];
+}
+
+- (NSString*) authorizerId {
+    return [[self authorizers] valueForKey:[[[[self authorizers] allKeys] sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)] objectAtIndex:[(NSNumber*)[[self authorizerPicker] selectedObject][0] integerValue]]];
+}
+
 - (void) fetchAutomatonID {
     
-    NSString* userTypeId = [[self userTypes] valueForKey:[[[self userTypes] allKeys] objectAtIndex:[(NSNumber*)[[self userTypePicker] selectedObject][0] integerValue]]];
-    NSString* authorizerId = [[self authorizers] valueForKey:[[[self authorizers] allKeys] objectAtIndex:[(NSNumber*)[[self authorizerPicker] selectedObject][0] integerValue]]];
-
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/api/automata/automatonRequest/%@%@",B2A_PSE_SERVER ,userTypeId, authorizerId]];
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/api/automata/automatonRequest/%@%@",B2A_PSE_SERVER ,[self userTypeId], [self authorizerId]]];
     NSMutableURLRequest *request = [[NSURLRequest requestWithURL:url] mutableCopy];
     
     [request setHTTPMethod:@"POST"];
     [request setHTTPBody:[self paramsAsData]];
-    
-    
+
     NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithRequest:request
                                                                  completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                                                                      if (data.length > 0 && error == nil) {
-                                                                         NSDictionary *greeting = [NSJSONSerialization JSONObjectWithData:data
+                                                                         NSDictionary *automatonRequestResponse = [NSJSONSerialization JSONObjectWithData:data
                                                                                                                                   options:0
                                                                                                                                     error:NULL];
-                                                                         NSLog(@"%@", greeting.description);
-                                                                         if ([greeting valueForKey:@"success"]) {
+
+                                                                         if ([automatonRequestResponse valueForKey:@"success"]) {
                                                                              
-                                                                             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@/openapp/%@",B2A_PSE_SERVER ,[greeting valueForKey:@"AutomatonRequestId"]]]
+                                                                             [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"%@/openapp/%@",B2A_PSE_SERVER ,[automatonRequestResponse valueForKey:@"AutomatonRequestId"]]]
                                                                                                                 options:@{}
                                                                                                       completionHandler:^(BOOL success) {
                                                                                                           if (success) {
